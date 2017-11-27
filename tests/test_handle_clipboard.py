@@ -28,7 +28,11 @@ def test_parse_git_url(url, clone_url, author_name, repo_name):
     ('https://www.youtube.com/watch?v=X1VWFhC6G-0',
      video_dl),
     ('http://www.bilibili.com/video/av7594007/',
-     video_dl)
+     video_dl),
+    ('https://www.archlinux.org/packages/extra/x86_64/dbus-glib/',
+     arch_pkg),
+    ('https://aur.archlinux.org/packages/ros-kinetic-simulators/',
+     arch_pkg),
 ])
 def test_condition_func(url, func_assert):
     for cond, func in cond_func:

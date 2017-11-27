@@ -42,11 +42,11 @@ def parse_git_url(url):
     return clone_url, author_name, repo_name
 
 
-def git_clone_condition(url):
+def git_clone_cond(url):
     return re.search(r'git', url)
 
 
-@collect(git_clone_condition)
+@collect(git_clone_cond)
 def git_clone(url):
     git_dir = os.path.join(home_dir, 'Git')
     clone_url, author_name, repo_name = parse_git_url(url)
@@ -56,17 +56,17 @@ def git_clone(url):
     os.system(cmd)
 
 
-def jump_dir_condition(path):
+def jump_dir_cond(path):
     return os.path.exists(path)
 
 
-@collect(jump_dir_condition)
+@collect(jump_dir_cond)
 def jump_dir(path):
     os.chdir(path)
     os.system("/bin/zsh")
 
 
-def video_dl_condition(url):
+def video_dl_cond(url):
     pat = re.compile(r"""
     (youtube
     |bilibili
@@ -75,7 +75,7 @@ def video_dl_condition(url):
     return re.search(pat, url)
 
 
-@collect(video_dl_condition)
+@collect(video_dl_cond)
 def video_dl(url):
     video_dir = os.path.join(home_dir, 'Video/')
     output = '-o %s/' % video_dir
@@ -88,6 +88,21 @@ def video_dl(url):
         sub = ''
 
     cmd = 'youtube-dl %s %s %s %s' % (output, proxy, sub, url)
+    os.system(cmd)
+
+
+def arch_pkg_cond(url):
+    return re.search(r'archlinux', url)
+
+
+@collect(arch_pkg_cond)
+def arch_pkg(url):
+    # like this '' is [-1] we choose [-2]
+    # 'https://aur.archlinux.org/packages/ros-kinetic-simulators/'
+    pkg = url.split('/')[-2]
+    pkg_manager = 'yaourt' if re.search(r'aur', url) else 'pacman'
+
+    cmd = 'sudo %s -S %s' % (pkg_manager, pkg)
     os.system(cmd)
 
 
