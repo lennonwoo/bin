@@ -1,6 +1,7 @@
 import pytest
 from scripts.handle_clipboard import *
 
+
 @pytest.mark.parametrize("url, clone_url, author_name, repo_name", [
     ('https://gitxxx.com/author_name/repo_name/?misc',
      'https://gitxxx.com/author_name/repo_name',
@@ -17,3 +18,19 @@ from scripts.handle_clipboard import *
 ])
 def test_parse_git_url(url, clone_url, author_name, repo_name):
     assert parse_git_url(url) == (clone_url, author_name, repo_name)
+
+
+@pytest.mark.parametrize("url, func_assert", [
+    ('https://gitxxx.com/author_name/repo_name/?misc',
+     git_clone,),
+    ('/opt/pyenv/completions/',
+     jump_dir),
+    ('https://www.youtube.com/watch?v=X1VWFhC6G-0',
+     video_dl),
+    ('http://www.bilibili.com/video/av7594007/',
+     video_dl)
+])
+def test_condition_func(url, func_assert):
+    for cond, func in cond_func:
+        if cond(url):
+            assert func == func_assert
