@@ -3,10 +3,21 @@ import os
 import re
 import pyperclip
 
-__version__ = 0.1
+__version__ = 0.11
 __author__ = 'lennon'
 
 home_dir = os.path.expanduser('~')
+
+cond_func = []
+
+
+def collect(condition):
+    def decorate(func):
+        global cond_func
+        cond_func += [[condition, func]]
+
+        return func
+    return decorate
 
 
 def parse_git_url(url):
@@ -31,6 +42,11 @@ def parse_git_url(url):
     return clone_url, author_name, repo_name
 
 
+def git_clone_condition(url):
+    return re.search(r'git', url)
+
+
+@collect(git_clone_condition)
 def git_clone(url):
     git_dir = os.path.join(home_dir, 'Git')
     clone_url, author_name, repo_name = parse_git_url(url)
@@ -40,11 +56,26 @@ def git_clone(url):
     os.system(cmd)
 
 
+def jump_dir_condition(path):
+    return os.path.exists(path)
+
+
+@collect(jump_dir_condition)
 def jump_dir(path):
     os.chdir(path)
     os.system("/bin/zsh")
 
 
+def video_dl_condition(url):
+    pat = re.compile(r"""
+    (youtube
+    |bilibili
+    )
+    """)
+    return re.search(pat, url)
+
+
+@collect(video_dl_condition)
 def video_dl(url):
     video_dir = os.path.join(home_dir, 'Video/')
     output = '-o %s/' % video_dir
@@ -60,15 +91,16 @@ def video_dl(url):
     os.system(cmd)
 
 
+def handle_url(url):
+    for cond, func in cond_func:
+        if cond(url):
+            func(url)
+            return
+
+
 def main():
     url = pyperclip.paste()
-
-    if re.search(r'git', url):
-        git_clone(url)
-    elif os.path.exists(url):
-        jump_dir(url)
-    else:
-        video_dl(url)
+    handle_url(url)
 
 
 if __name__ == '__main__':
