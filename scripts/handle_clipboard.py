@@ -22,11 +22,12 @@ def collect(condition):
 
 def parse_git_url(url):
     # get the info we want from the url as follow
-    # https://gitxxx.com/author_name/repo_name/?misc
+    # https://misc/gitxxx.com/author_name/repo_name/?misc
     pat = re.compile(r"""
     \s*                           # Skip leading whitespace
     (?P<clone_url>                # The url for git clone
         https?://                 # HTTP or HTTPS
+        .*                        # support sites like gist
         (?P<website>git[^/]+)     # the website
         [.]com/                   # .com/
         (?P<author_name>[^/]+)    # The author's name
