@@ -1,6 +1,5 @@
 import pytest
-from scripts.handle_clipboard import cond_func, parse_git_url, git_clone
-from scripts.handle_clipboard import jump_dir, video_dl, arch_pkg
+from scripts.handle_clipboard import *
 
 
 @pytest.mark.parametrize("url, clone_url, author_name, repo_name", [
@@ -26,30 +25,30 @@ from scripts.handle_clipboard import jump_dir, video_dl, arch_pkg
      ),
 ])
 def test_parse_git_url(url, clone_url, author_name, repo_name):
-    assert parse_git_url(url) == (clone_url, author_name, repo_name)
+    assert GitHandler(url).parse_git_url() == (clone_url, author_name, repo_name)
 
 
-@pytest.mark.parametrize("url, func_assert", [
+@pytest.mark.parametrize("url, assert_handler", [
     ('https://gitxxx.com/author_name/repo_name/?misc',
-     git_clone,
+     GitHandler,
      ),
     ('/opt/pyenv/completions/',
-     jump_dir,
+     DirHandler,
      ),
     ('https://www.youtube.com/watch?v=X1VWFhC6G-0',
-     video_dl,
+     VideoDownloadHandler,
      ),
     ('http://www.bilibili.com/video/av7594007/',
-     video_dl,
+     VideoDownloadHandler,
      ),
     ('https://www.archlinux.org/packages/extra/x86_64/dbus-glib/',
-     arch_pkg,
+     ArchlinuxHandler,
      ),
     ('https://aur.archlinux.org/packages/ros-kinetic-simulators/',
-     arch_pkg,
+     ArchlinuxHandler,
      ),
 ])
-def test_condition_func(url, func_assert):
-    for cond, func in cond_func:
-        if cond(url):
-            assert func == func_assert
+def test_condition(url, assert_handler):
+    for handler in Handler.__subclasses__():
+        if handler(url).condition():
+            assert handler == assert_handler

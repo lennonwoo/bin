@@ -3,115 +3,124 @@ import os
 import re
 import pyperclip
 
-__version__ = 0.11
+__version__ = 0.12
 __author__ = 'lennon'
 
-home_dir = os.path.expanduser('~')
 
-cond_func = []
+class Handler():
+    def __init__(self, url):
+        self.home_dir = os.path.expanduser('~')
+        self.url = url
 
+    def handle(self):
+        if self.condition():
+            self.handle_basic()
+            self.handle_extra()
+            exit(0)
 
-def collect(condition):
-    def decorate(func):
-        global cond_func
-        cond_func += [[condition, func]]
+    def condition(self):
+        pass
 
-        return func
-    return decorate
+    def handle_basic(self):
+        pass
 
-
-def parse_git_url(url):
-    # get the info we want from the url as follow
-    # https://misc/gitxxx.com/author_name/repo_name/?misc
-    pat = re.compile(r"""
-    \s*                           # Skip leading whitespace
-    (?P<clone_url>                # The url for git clone
-        https?://                 # HTTP or HTTPS
-        .*                        # support sites like gist
-        (?P<website>git[^/]+)     # the website
-        [.]com/                   # .com/
-        (?P<author_name>[^/]+)    # The author's name
-        /                         # / split
-        (?P<repo_name>[^/]+)      # The repo's name
-    )
-    #/?.*$                        # Traling character
-    """, re.VERBOSE)
-    m = re.search(pat, url)
-    clone_url = m.group('clone_url')
-    author_name = m.group('author_name')
-    repo_name = m.group('repo_name')
-    return clone_url, author_name, repo_name
+    def handle_extra(self):
+        pass
 
 
-def git_clone_cond(url):
-    return re.search(r'git', url)
+class GitHandler(Handler):
+    def parse_git_url(self):
+        # get the info we want from the url as follow
+        # https://misc/gitxxx.com/author_name/repo_name/?misc
+        pat = re.compile(r"""
+        \s*                          # Skip leading whitespace
+        (?P<clone_url>               # The url for git clone
+            https?://                # HTTP or HTTPS
+            .*                       # support sites like gist
+            (?P<website>git[^/]+)    # the website
+            [.]com/                  # .com/
+            (?P<author_name>[^/]+)   # The author's name
+            /                        # / split
+            (?P<repo_name>[^/]+)     # The repo's name
+        )
+        #/?.*$                       # Traling character
+        """, re.VERBOSE)
+        m = re.search(pat, self.url)
+        clone_url = m.group('clone_url')
+        author_name = m.group('author_name')
+        repo_name = m.group('repo_name')
+        return clone_url, author_name, repo_name
+
+    def condition(self):
+        return re.search(r'git', self.url)
+
+    def handle_basic(self):
+        git_dir = os.path.join(self.home_dir, 'Git')
+        clone_url, author_name, repo_name = self.parse_git_url()
+        self.clone_dir = os.path.join(git_dir, author_name, repo_name)
+
+        cmd = 'git clone %s %s' % (clone_url, self.clone_dir)
+        os.system(cmd)
+
+    def handle_extra(self):
+        os.chdir(self.clone_dir)
+        os.system("/bin/zsh")
 
 
-@collect(git_clone_cond)
-def git_clone(url):
-    git_dir = os.path.join(home_dir, 'Git')
-    clone_url, author_name, repo_name = parse_git_url(url)
-    clone_dir = os.path.join(git_dir, author_name, repo_name)
+class DirHandler(Handler):
+    def condition(self):
+        return os.path.exists(self.url)
 
-    cmd = 'git clone %s %s' % (clone_url, clone_dir)
-    os.system(cmd)
-
-
-def jump_dir_cond(path):
-    return os.path.exists(path)
+    def handle_basic(self):
+        os.chdir(self.url)
+        os.system("/bin/zsh")
 
 
-@collect(jump_dir_cond)
-def jump_dir(path):
-    os.chdir(path)
-    os.system("/bin/zsh")
+class VideoDownloadHandler(Handler):
+    def __init__(self, url):
+        super().__init__(url)
+
+    def condition(self):
+        pat = re.compile(r"""
+        (youtube
+        |bilibili
+        )
+        """)
+        return re.search(pat, self.url)
+
+    def handle_basic(self):
+        video_dir = os.path.join(self.home_dir, 'Video/')
+        output = '-o %s/' % video_dir
+
+        if re.search(r'youtube', self.url):
+            proxy = '--proxy socks5://127.0.0.1:1080/'
+            sub = '--write-auto-sub'
+        else:
+            proxy = ''
+            sub = ''
+
+        cmd = 'youtube-dl %s %s %s %s' % (output, proxy, sub, self.url)
+        os.system(cmd)
 
 
-def video_dl_cond(url):
-    pat = re.compile(r"""
-    (youtube
-    |bilibili
-    )
-    """)
-    return re.search(pat, url)
+class ArchlinuxHandler(Handler):
+    def condition(self):
+        return re.search(r'archlinux', self.url)
 
+    def handle_basic(self):
+        # like this '' is [-1] we choose [-2]
+        # 'https://aur.archlinux.org/packages/ros-kinetic-simulators/'
+        pkg = self.url.split('/')[-2]
+        pkg_manager = 'yaourt' if re.search(r'aur', self.url) else 'pacman'
 
-@collect(video_dl_cond)
-def video_dl(url):
-    video_dir = os.path.join(home_dir, 'Video/')
-    output = '-o %s/' % video_dir
-
-    if re.search(r'youtube', url):
-        proxy = '--proxy socks5://127.0.0.1:1080/'
-        sub = '--write-auto-sub'
-    else:
-        proxy = ''
-        sub = ''
-
-    cmd = 'youtube-dl %s %s %s %s' % (output, proxy, sub, url)
-    os.system(cmd)
-
-
-def arch_pkg_cond(url):
-    return re.search(r'archlinux', url)
-
-
-@collect(arch_pkg_cond)
-def arch_pkg(url):
-    # like this '' is [-1] we choose [-2]
-    # 'https://aur.archlinux.org/packages/ros-kinetic-simulators/'
-    pkg = url.split('/')[-2]
-    pkg_manager = 'yaourt' if re.search(r'aur', url) else 'pacman'
-
-    cmd = 'sudo %s -S %s' % (pkg_manager, pkg)
-    os.system(cmd)
+        cmd = '%s -S %s' % (pkg_manager, pkg)
+        os.system(cmd)
 
 
 def handle_url(url):
-    for cond, func in cond_func:
-        if cond(url):
-            func(url)
-            return
+    for handler in Handler.__subclasses__():
+        h = handler(url)
+        h.handle()
 
 
 def main():
