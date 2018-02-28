@@ -19,13 +19,17 @@ class Handler():
             exit(0)
 
     def condition(self):
-        pass
+        raise NotImplemented
 
     def handle_basic(self):
-        pass
+        raise NotImplemented
 
     def handle_extra(self):
         pass
+
+    def change_cur_dir(self, dir_path):
+        os.chdir(dir_path)
+        os.system("/bin/zsh")
 
 
 class GitHandler(Handler):
@@ -63,8 +67,7 @@ class GitHandler(Handler):
         os.system(cmd)
 
     def handle_extra(self):
-        os.chdir(self.clone_dir)
-        os.system("/bin/zsh")
+        self.change_cur_dir(self.clone_dir)
 
 
 class DirHandler(Handler):
@@ -72,14 +75,10 @@ class DirHandler(Handler):
         return os.path.exists(self.url)
 
     def handle_basic(self):
-        os.chdir(self.url)
-        os.system("/bin/zsh")
+        self.change_cur_dir(self.url)
 
 
 class VideoDownloadHandler(Handler):
-    def __init__(self, url):
-        super().__init__(url)
-
     def condition(self):
         pat = re.compile(r"""
         (youtube
