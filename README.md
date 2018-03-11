@@ -10,16 +10,16 @@ The scripts for everyday use
 
 ## Install
 
-First install [youtube-dl](https://github.com/rg3/youtube-dl)
+First install
+[youtube-dl](https://github.com/rg3/youtube-dl)
+[pipenv](https://github.com/pypa/pipenv)
 
 Then
 ```
-pip install -r requirements.txt 
+pipenv install
 ```
 
-Finally run
+Finally run to symlink the src to your ~bin/ directory
 ```
-python /tools/install.py
+python tools/install.py
 ```
-
-to symlink the src to your ~bin/ directory
