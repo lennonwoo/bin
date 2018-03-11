@@ -19,8 +19,12 @@ def install():
 
     for src_path, script in scripts_list():
         # remove the .py for symlink_path
-        symlink_path = os.path.join(bin_dir, script[:-3])
-        os.symlink(src_path, symlink_path)
+        symlink_path = os.path.join(bin_dir, script[:-3] if script.endswith("py") else script)
+
+        try:
+            os.symlink(src_path, symlink_path)
+        except FileExistsError as e:
+            print("Pass cause just link", e)
 
 
 if __name__ == '__main__':

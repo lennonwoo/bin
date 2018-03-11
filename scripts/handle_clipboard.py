@@ -1,16 +1,28 @@
 #!/usr/bin/env python
 import os
 import re
+from configparser import ConfigParser
+
 import pyperclip
 
 __version__ = 0.12
 __author__ = 'lennon'
 
 
-class Handler():
-    def __init__(self, url):
+def get_relative_path(filename):
+    dirname = os.path.dirname(__file__)
+    return os.path.join(dirname, filename)
+
+
+class Handler:
+    def __init__(self, url, section_name=None):
         self.home_dir = os.path.expanduser('~')
         self.url = url
+
+        if section_name is not None:
+            config = ConfigParser()
+            config.read(get_relative_path('config.ini'))
+            self.location = config.get(section_name, "location")
 
     def handle(self):
         if self.condition():
@@ -33,6 +45,9 @@ class Handler():
 
 
 class GitHandler(Handler):
+    def __init__(self, url):
+        super(GitHandler, self).__init__(url, "Git")
+
     def parse_git_url(self):
         # get the info we want from the url as follow
         # https://misc/gitxxx.com/author_name/repo_name/?misc
@@ -59,7 +74,7 @@ class GitHandler(Handler):
         return re.search(r'git', self.url)
 
     def handle_basic(self):
-        git_dir = os.path.join(self.home_dir, 'Git')
+        git_dir = os.path.join(self.home_dir, self.location)
         clone_url, author_name, repo_name = self.parse_git_url()
         self.clone_dir = os.path.join(git_dir, author_name, repo_name)
 
@@ -79,6 +94,9 @@ class DirHandler(Handler):
 
 
 class VideoDownloadHandler(Handler):
+    def __init__(self, url):
+        super(VideoDownloadHandler, self).__init__(url, "Video")
+
     def condition(self):
         pat = re.compile(r"""
         (youtube
@@ -88,7 +106,7 @@ class VideoDownloadHandler(Handler):
         return re.search(pat, self.url)
 
     def handle_basic(self):
-        video_dir = os.path.join(self.home_dir, 'Video/')
+        video_dir = os.path.join(self.home_dir, self.location)
         output = '-o %s/' % video_dir
 
         if re.search(r'youtube', self.url):
