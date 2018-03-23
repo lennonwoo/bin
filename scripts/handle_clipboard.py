@@ -14,6 +14,19 @@ def get_relative_path(filename):
     return os.path.join(dirname, filename)
 
 
+class cd:
+    """Context manager for changing the current working directory"""
+    def __init__(self, newPath):
+        self.newPath = os.path.expanduser(newPath)
+
+    def __enter__(self):
+        self.savedPath = os.getcwd()
+        os.chdir(self.newPath)
+
+    def __exit__(self, etype, value, traceback):
+        os.chdir(self.savedPath)
+
+
 class Handler:
     def __init__(self, url, section_name=None):
         self.home_dir = os.path.expanduser('~')
@@ -23,6 +36,7 @@ class Handler:
             config = ConfigParser()
             config.read(get_relative_path('config.ini'))
             self.location = config.get(section_name, "location")
+            self.parse_config_extra(config)
 
     def handle(self):
         if self.condition():
@@ -39,14 +53,18 @@ class Handler:
     def handle_extra(self):
         pass
 
+    def parse_config_extra(self, config):
+        pass
+
     def change_cur_dir(self, dir_path):
         os.chdir(dir_path)
         os.system("/bin/zsh")
 
 
 class GitHandler(Handler):
+    section_name = "Stream"
     def __init__(self, url):
-        super(GitHandler, self).__init__(url, "Git")
+        super(GitHandler, self).__init__(url, self.section_name)
 
     def parse_git_url(self):
         # get the info we want from the url as follow
@@ -93,31 +111,43 @@ class DirHandler(Handler):
         self.change_cur_dir(self.url)
 
 
-class VideoDownloadHandler(Handler):
+class StreamHandler(Handler):
+    section_name = "Stream"
     def __init__(self, url):
-        super(VideoDownloadHandler, self).__init__(url, "Video")
+        super(StreamHandler, self).__init__(url, self.section_name)
 
     def condition(self):
         pat = re.compile(r"""
         (youtube
         |bilibili
         )
-        """)
-        return re.search(pat, self.url)
+        """, re.VERBOSE)
+        return pat.search(self.url)
 
     def handle_basic(self):
-        video_dir = os.path.join(self.home_dir, self.location)
-        output = '-o %s/' % video_dir
-
         if re.search(r'youtube', self.url):
             proxy = '--proxy socks5://127.0.0.1:1080/'
-            sub = '--write-auto-sub'
         else:
             proxy = ''
-            sub = ''
 
-        cmd = 'youtube-dl %s %s %s %s' % (output, proxy, sub, self.url)
-        os.system(cmd)
+        if self.extract_music:
+            extra = '--extract-audio --audio-format mp3'
+        else:
+            extra = '--write-auto-sub'
+
+        cmd = 'youtube-dl %s %s %s' % (proxy, extra, self.url)
+
+        video_dir = os.path.join(self.home_dir, self.location)
+        with cd(video_dir):
+            os.system(cmd)
+
+    # TODO descriptor or something else?
+    def parse_config_extra(self, config):
+        if config.get(StreamHandler.section_name,
+                      'extract_music') == "yes":
+            self.extract_music = True
+        else:
+            self.extract_music = False
 
 
 class ArchlinuxHandler(Handler):
