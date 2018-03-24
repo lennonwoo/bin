@@ -62,7 +62,7 @@ class Handler:
 
 
 class GitHandler(Handler):
-    section_name = "Stream"
+    section_name = "Git"
     def __init__(self, url):
         super(GitHandler, self).__init__(url, self.section_name)
 
