@@ -13,3 +13,4 @@ pyperclip = "*"
 [packages]
 
 pytest = "*"
+"i3-py" = "*"
