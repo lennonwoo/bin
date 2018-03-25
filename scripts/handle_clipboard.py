@@ -5,13 +5,18 @@ from configparser import ConfigParser
 
 import pyperclip
 
-__version__ = 0.12
+__version__ = 0.13
 __author__ = 'lennon'
 
 
 def get_relative_path(filename):
     dirname = os.path.dirname(__file__)
     return os.path.join(dirname, filename)
+
+
+def change_cur_dir(dir_path):
+    os.chdir(dir_path)
+    os.system("/bin/zsh")
 
 
 class cd:
@@ -35,8 +40,10 @@ class Handler:
         if section_name is not None:
             config = ConfigParser()
             config.read(get_relative_path('config.ini'))
-            self.location = config.get(section_name, "location")
-            self.parse_config_extra(config)
+            section = config[section_name]
+
+            self.location = section.get("location", None)
+            self.parse_config(section)
 
     def handle(self):
         if self.condition():
@@ -53,18 +60,13 @@ class Handler:
     def handle_extra(self):
         pass
 
-    def parse_config_extra(self, config):
+    def parse_config(self, config):
         pass
-
-    def change_cur_dir(self, dir_path):
-        os.chdir(dir_path)
-        os.system("/bin/zsh")
 
 
 class GitHandler(Handler):
-    section_name = "Git"
     def __init__(self, url):
-        super(GitHandler, self).__init__(url, self.section_name)
+        super(GitHandler, self).__init__(url, 'Git')
 
     def parse_git_url(self):
         # get the info we want from the url as follow
@@ -100,7 +102,14 @@ class GitHandler(Handler):
         os.system(cmd)
 
     def handle_extra(self):
-        self.change_cur_dir(self.clone_dir)
+        if self.cmd_extra:
+            with cd(self.clone_dir):
+                os.system(self.cmd_extra)
+        else:
+            change_cur_dir(self.clone_dir)
+
+    def parse_config(self, section):
+        self.cmd_extra = section.get('cmd_extra', None)
 
 
 class DirHandler(Handler):
@@ -108,13 +117,12 @@ class DirHandler(Handler):
         return os.path.exists(self.url)
 
     def handle_basic(self):
-        self.change_cur_dir(self.url)
+        change_cur_dir(self.url)
 
 
 class StreamHandler(Handler):
-    section_name = "Stream"
     def __init__(self, url):
-        super(StreamHandler, self).__init__(url, self.section_name)
+        super(StreamHandler, self).__init__(url, 'Stream')
 
     def condition(self):
         pat = re.compile(r"""
@@ -141,13 +149,8 @@ class StreamHandler(Handler):
         with cd(video_dir):
             os.system(cmd)
 
-    # TODO descriptor or something else?
-    def parse_config_extra(self, config):
-        if config.get(StreamHandler.section_name,
-                      'extract_music') == "yes":
-            self.extract_music = True
-        else:
-            self.extract_music = False
+    def parse_config(self, section):
+        self.extract_music = section.get('extract_music', None)
 
 
 class ArchlinuxHandler(Handler):
