@@ -19,17 +19,17 @@ def change_cur_dir(dir_path):
     os.system("/bin/zsh")
 
 
-class cd:
+class CD:
     """Context manager for changing the current working directory"""
-    def __init__(self, newPath):
-        self.newPath = os.path.expanduser(newPath)
+    def __init__(self, new_path):
+        self.new_path = os.path.expanduser(new_path)
 
     def __enter__(self):
-        self.savedPath = os.getcwd()
-        os.chdir(self.newPath)
+        self.saved_path = os.getcwd()
+        os.chdir(self.new_path)
 
     def __exit__(self, etype, value, traceback):
-        os.chdir(self.savedPath)
+        os.chdir(self.saved_path)
 
 
 class Handler:
@@ -68,6 +68,9 @@ class GitHandler(Handler):
     def __init__(self, url):
         super(GitHandler, self).__init__(url, 'Git')
 
+    def condition(self):
+        return re.search(r'git', self.url)
+
     def parse_git_url(self):
         # get the info we want from the url as follow
         # https://misc/gitxxx.com/author_name/repo_name/?misc
@@ -90,9 +93,6 @@ class GitHandler(Handler):
         repo_name = m.group('repo_name')
         return clone_url, author_name, repo_name
 
-    def condition(self):
-        return re.search(r'git', self.url)
-
     def handle_basic(self):
         git_dir = os.path.join(self.home_dir, self.location)
         clone_url, author_name, repo_name = self.parse_git_url()
@@ -103,7 +103,7 @@ class GitHandler(Handler):
 
     def handle_extra(self):
         if self.cmd_extra:
-            with cd(self.clone_dir):
+            with CD(self.clone_dir):
                 os.system(self.cmd_extra)
         else:
             change_cur_dir(self.clone_dir)
@@ -146,7 +146,7 @@ class StreamHandler(Handler):
         cmd = 'youtube-dl %s %s %s' % (proxy, extra, self.url)
 
         video_dir = os.path.join(self.home_dir, self.location)
-        with cd(video_dir):
+        with CD(video_dir):
             os.system(cmd)
 
     def parse_config(self, section):
@@ -157,13 +157,17 @@ class ArchlinuxHandler(Handler):
     def condition(self):
         return re.search(r'archlinux', self.url)
 
+    def parse_arch_url(self):
+        for s in reversed(self.url.split('/')):
+            if s != '':
+                return s
+
     def handle_basic(self):
-        # like this '' is [-1] we choose [-2]
-        # 'https://aur.archlinux.org/packages/ros-kinetic-simulators/'
-        pkg = self.url.split('/')[-2]
+        pkg = self.parse_arch_url()
         pkg_manager = 'yaourt' if re.search(r'aur', self.url) else 'pacman'
 
-        cmd = '%s -S %s' % (pkg_manager, pkg)
+        cmd = 'sudo %s -S %s' % (pkg_manager, pkg)
+        print('The command is:\t', cmd)
         os.system(cmd)
 
 

@@ -1,4 +1,5 @@
 import pytest
+
 from scripts.handle_clipboard import *
 
 
@@ -26,6 +27,24 @@ from scripts.handle_clipboard import *
 ])
 def test_parse_git_url(url, clone_url, author_name, repo_name):
     assert GitHandler(url).parse_git_url() == (clone_url, author_name, repo_name)
+
+
+@pytest.mark.parametrize("url, pkg_name", [
+    ('https://aur.archlinux.org/packages/gazebo/',
+     'gazebo',
+     ),
+    ('https://aur.archlinux.org/packages/gazebo',
+     'gazebo',
+     ),
+    ('https://www.archlinux.org/packages/extra/x86_64/emacs/',
+     'emacs',
+     ),
+    ('https://www.archlinux.org/packages/extra/x86_64/emacs',
+     'emacs',
+     ),
+])
+def test_parse_git_url(url, pkg_name):
+    assert ArchlinuxHandler(url).parse_arch_url() == pkg_name
 
 
 @pytest.mark.parametrize("url, assert_handler", [
